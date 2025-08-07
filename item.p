@@ -1,12 +1,12 @@
 DEFINE BUTTON bt-save LABEL "Salvar".
 DEFINE BUTTON bt-canc LABEL "Cancelar" AUTO-ENDKEY.
 
-DEF INPUT PARAM pCodPedido LIKE Pedidos.CodPedido NO-UNDO.
+DEFINE INPUT PARAMETER pCodPedido LIKE Pedidos.CodPedido NO-UNDO.
 DEFINE VARIABLE dValTotal  AS   DECIMAL           NO-UNDO.
 
-DEFINE QUERY qItem FOR Itens SCROLLING.
+DEFINE SHARED VARIABLE cActionItem AS CHARACTER NO-UNDO.
 
-DEFINE BUFFER bItens    FOR Itens.
+DEFINE SHARED BUFFER bItens    FOR Itens.
 
 DEFINE FRAME f-item
     Itens.CodProduto    COLON 20 Produtos.NomProduto NO-LABELS
@@ -34,18 +34,25 @@ ON LEAVE OF Itens.NumQuantidade DO:
 END.
 
 ON CHOOSE OF bt-save DO:
-   CREATE bItens.
-   ASSIGN bItens.CodProduto    = INPUT Itens.CodProduto
-          bItens.NumQuantidade = INPUT Itens.NumQuantidade
-          bItens.CodPedido     = pCodPedido
-          bItens.CodItem       = NEXT-VALUE(seqItem)
-          bItens.ValTotal      = dValTotal.
-   OPEN QUERY qItem FOR EACH Itens. 
-   APPLY 'window-close' TO FRAME f-item.
+    IF cActionItem = "add" THEN DO:
+       CREATE bItens.
+       ASSIGN bItens.CodPedido     = pCodPedido
+              bItens.CodItem       = NEXT-VALUE(seqItem).
+    END.        
+    ASSIGN bItens.CodProduto    = INPUT Itens.CodProduto
+           bItens.NumQuantidade = INPUT Itens.NumQuantidade
+           bItens.ValTotal      = dValTotal.
+              
+    APPLY 'window-close' TO FRAME f-item.
 END.
-
-OPEN QUERY qItem FOR EACH Itens.            
-ENABLE ALL EXCEPT Produtos.NomProduto Itens.ValTotal WITH FRAME f-item .
+          
+ENABLE ALL EXCEPT Produtos.NomProduto Itens.ValTotal WITH FRAME f-item.
+IF cActionItem = "mod" THEN DO:
+    DISPLAY bItens.CodProduto    @ Itens.CodProduto 
+            bItens.NumQuantidade @ Itens.NumQuantidade
+            bItens.Valtotal      @ Itens.ValTotal
+        WITH FRAME f-item.
+END.
 WAIT-FOR WINDOW-CLOSE OF FRAME f-item.
 
 PROCEDURE piValidaProduto:

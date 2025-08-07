@@ -85,7 +85,7 @@ ON CHOOSE OF bt-del DO:
 
     DEFINE BUFFER bProdutos FOR Produtos.
 
-    MESSAGE "Confirma a eliminacao da cidade " Produtos.NomProduto "?" UPDATE lConf
+    MESSAGE "Confirma a eliminacao do produto " Produtos.NomProduto "?" UPDATE lConf
             VIEW-AS ALERT-BOX QUESTION BUTTONS YES-NO
                 TITLE "Eliminacao".
     IF  lConf THEN DO:

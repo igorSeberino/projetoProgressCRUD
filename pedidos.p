@@ -20,16 +20,18 @@ DEFINE VARIABLE cAction  AS CHARACTER   NO-UNDO.
 DEFINE VARIABLE cTable   AS CHARACTER   NO-UNDO.
 DEFINE VARIABLE iNumItem AS INTEGER     NO-UNDO.
 
+DEFINE NEW SHARED VARIABLE cActionItem AS CHARACTER NO-UNDO.
+
 DEFINE QUERY qPed FOR Pedidos, Clientes SCROLLING.
 DEFINE QUERY qItem FOR Itens, Produtos SCROLLING.
 
 DEFINE BROWSE browseItem QUERY qItem DISPLAY
-    iNumITem LABEL "Item" Itens.CodProduto LABEL "Codigo" Produtos.NomProduto 
+    Itens.CodItem LABEL "Item" Itens.CodProduto LABEL "Codigo" Produtos.NomProduto 
     Itens.NumQuantidade Produtos.ValProduto Itens.ValTotal
     WITH SEPARATORS 10 DOWN.
 
 DEFINE BUFFER bPedidos  FOR Pedidos.
-DEFINE BUFFER bItens    FOR Itens.
+DEFINE NEW SHARED BUFFER bItens    FOR Itens.
 
 DEFINE FRAME f-ped
     bt-pri AT 10
@@ -49,14 +51,6 @@ DEFINE FRAME f-ped
     bt-delItem
         WITH SIDE-LABELS THREE-D SIZE 140 BY 22
             VIEW-AS DIALOG-BOX TITLE "Pedidos".
-            
-DEFINE FRAME f-item
-    Itens.CodProduto    COLON 20 Produtos.NomProduto NO-LABELS
-    Itens.NumQuantidade COLON 20
-    Itens.ValTotal      COLON 20 SKIP
-    bt-save AT 3 bt-canc
-        WITH SIDE-LABELS THREE-D SIZE 90 BY 15
-            VIEW-AS DIALOG-BOX TITLE "Pedidos".
 
 ON CHOOSE OF bt-pri DO:
     GET FIRST qPed.
@@ -67,20 +61,16 @@ ON CHOOSE OF bt-ant DO:
     GET PREV qPed.
     IF AVAILABLE Pedidos THEN
         RUN piMostra.
-    ELSE DO:
+    ELSE
         GET FIRST qPed.
-        RUN piMostra.
-    END.
 END.
 
 ON CHOOSE OF bt-prox DO:
     GET NEXT qPed.
     IF AVAILABLE Pedidos THEN
         RUN piMostra.
-    ELSE DO:
+    ELSE
         GET LAST qPed.
-        RUN piMostra.
-    END.
 END.
 
 ON CHOOSE OF bt-ult DO:
@@ -94,50 +84,99 @@ ON CHOOSE OF bt-add DO:
     RUN piHabilitaCampos (INPUT TRUE).
 
     CLEAR FRAME f-ped.
+    CLOSE QUERY qItem.
     DISPLAY NEXT-VALUE(seqPedido) @ Pedidos.CodPedido WITH FRAME f-ped.
 END.
 
 ON CHOOSE OF bt-addItem DO:
+    DEFINE VARIABLE iCodItem AS INTEGER NO-UNDO.
+    FIND LAST Itens WHERE Itens.CodPedido = Pedidos.CodPedido 
+        NO-LOCK NO-ERROR.
+    ASSIGN cActionItem = "add"
+           iCodItem    = Itens.CodItem no-error.
     RUN c:/treinamento/workspace/projetoFinal/item.p(INPUT Pedidos.CodPedido).
+    
+    RUN piOpenQuery.
+    
+    FIND LAST Itens WHERE Itens.CodPedido = Pedidos.CodPedido NO-LOCK NO-ERROR.
+    IF NOT AVAIL Itens THEN
+        RETURN.
+    IF Itens.CodItem > iCodItem THEN DO:
+        FIND bPedidos WHERE bPedidos.CodPedido = Pedidos.CodPedido EXCLUSIVE-LOCK.
+        ASSIGN bPedidos.ValPedido += Itens.ValTotal.
+        MESSAGE bPedidos.ValPedido
+            VIEW-AS ALERT-BOX.
+        RUN piOpenQuery.
+    END.
+END.
+
+ON CHOOSE OF bt-mod DO:
+    ASSIGN cAction = "mod".
+    RUN piHabilitaBotoes (INPUT FALSE).
+    RUN piHabilitaCampos (INPUT TRUE).
+
+    RUN piMostra.
+END.
+
+ON CHOOSE OF bt-modItem DO:
+    ASSIGN cActionItem = "mod".
+    ASSIGN Pedidos.ValPedido -= Itens.ValTotal.
+    FIND FIRST bItens WHERE bItens.CodPedido = Itens.CodPedido AND
+                            bItens.CodItem   = Itens.CodItem
+                                EXCLUSIVE-LOCK NO-ERROR.
+    RUN c:/treinamento/workspace/projetoFinal/item.p(INPUT Pedidos.CodPedido).
+    GET LAST qItem.
+    ASSIGN Pedidos.ValPedido += Itens.ValTotal.
+    MESSAGE Itens.ValTotal
+        VIEW-AS ALERT-BOX.
+    
     
     RUN piOpenQuery.
 END.
 
-/*ON CHOOSE OF bt-mod DO:                                                            */
-/*    ASSIGN cAction = "mod".                                                        */
-/*    RUN piHabilitaBotoes (INPUT FALSE).                                            */
-/*    RUN piHabilitaCampos (INPUT TRUE).                                             */
-/*                                                                                   */
-/*    DISPLAY Pedidos.CodCliente WITH FRAME f-ped.                                   */
-/*    RUN piMostra.                                                                  */
-/*END.                                                                               */
-/*                                                                                   */
-/*ON CHOOSE OF bt-del DO:                                                            */
-/*    DEFINE VARIABLE lConf AS LOGICAL     NO-UNDO.                                  */
-/*                                                                                   */
-/*    DEFINE BUFFER bCliente FOR Pedidos.                                            */
-/*                                                                                   */
-/*    MESSAGE "Confirma a eliminacao do cliente " Pedidos.NomCliente "?" UPDATE lConf*/
-/*            VIEW-AS ALERT-BOX QUESTION BUTTONS YES-NO                              */
-/*                TITLE "Elimina‡Æo".                                                */
-/*    IF  lConf THEN DO:                                                             */
-/*        FIND bPedidos                                                              */
-/*            WHERE bPedidos.CodCliente = Pedidos.CodCliente                         */
-/*                EXCLUSIVE-LOCK NO-ERROR.                                           */
-/*        IF  AVAILABLE bPedidos THEN DO:                                            */
-/*            FIND FIRST Pedidos WHERE Pedidos.CodCliente = Pedidos.CodCliente       */
-/*                NO-LOCK NO-ERROR.                                                  */
-/*            IF AVAILABLE Pedidos THEN                                              */
-/*                MESSAGE "Cidade cont‚m Pedidos, opera‡Æo cancelada!"               */
-/*                    VIEW-AS ALERT-BOX.                                             */
-/*            ELSE DO:                                                               */
-/*                DELETE bPedidos.                                                   */
-/*                RUN piOpenQuery.                                                   */
-/*            END.                                                                   */
-/*        END.                                                                       */
-/*    END.                                                                           */
-/*END.                                                                               */
-/*                                                                                   */
+ON CHOOSE OF bt-del DO:
+    DEFINE VARIABLE lConf AS LOGICAL     NO-UNDO.
+
+    MESSAGE "Confirma a eliminacao do pedido " Pedidos.CodPedido "?" UPDATE lConf
+            VIEW-AS ALERT-BOX QUESTION BUTTONS YES-NO
+                TITLE "Elimina‡Æo".
+    IF  lConf THEN DO:
+        FIND bPedidos
+            WHERE bPedidos.CodPedido = Pedidos.CodPedido
+                EXCLUSIVE-LOCK NO-ERROR.
+        IF  AVAILABLE bPedidos THEN DO:
+            FOR EACH Itens WHERE Itens.CodPedido = Pedidos.CodPedido EXCLUSIVE-LOCK:
+                DELETE Itens.    
+            END.
+            DELETE bPedidos.
+            RUN piOpenQuery.
+            RUN piMostra.
+        END.
+    END.
+END.
+
+ON CHOOSE OF bt-delItem DO:
+    DEFINE VARIABLE lConf AS LOGICAL     NO-UNDO.
+    MESSAGE "Confirma a eliminacao do item " Itens.CodItem "?" UPDATE lConf
+            VIEW-AS ALERT-BOX QUESTION BUTTONS YES-NO
+                TITLE "Eliminacao".
+    IF  lConf THEN DO:
+        FIND bItens
+            WHERE bItens.CodPedido = Itens.CodPedido AND
+                  bItens.CodItem   = Itens.CodItem
+                    EXCLUSIVE-LOCK NO-ERROR.
+        IF  AVAILABLE bItens THEN DO:
+            FIND bPedidos WHERE bPedidos.CodPedido = Pedidos.CodPedido EXCLUSIVE-LOCK.
+            ASSIGN bPedidos.ValPedido -= bItens.ValTotal.
+            MESSAGE bPedidos.ValPedido
+                VIEW-AS ALERT-BOX.
+            DELETE bItens.
+            RUN piOpenQuery.
+            RUN piMostra.
+        END.
+    END.
+END.
+
 ON LEAVE OF Pedidos.CodCliente DO:
     DEFINE VARIABLE lValid AS LOGICAL     NO-UNDO.
     RUN piValidaCliente (INPUT Pedidos.CodCliente:SCREEN-VALUE,
@@ -153,7 +192,7 @@ ON LEAVE OF Pedidos.CodCliente DO:
                 WITH FRAME f-ped.
 END.
 
-ON CHOOSE OF bt-save IN FRAME f-ped DO:
+ON CHOOSE OF bt-save DO:
    IF cAction = "add" THEN DO:
       CREATE bPedidos.
       ASSIGN bPedidos.CodPedido  = INPUT Pedidos.CodPedido.
@@ -171,62 +210,61 @@ ON CHOOSE OF bt-save IN FRAME f-ped DO:
    RUN piHabilitaBotoes (INPUT TRUE).
    RUN piHabilitaCampos (INPUT FALSE).
    RUN piOpenQuery.
+   IF cAction = "add" THEN
+    APPLY 'choose' TO bt-ult.
 END.
 
-ON CHOOSE OF bt-save IN FRAME f-item DO:
-   CREATE bItens.
-   ASSIGN bItens.CodProduto  = INPUT Itens.CodProduto
-          bItens.NumQuantidade   = INPUT Itens.NumQuantidade.
-
-   RUN piHabilitaBotoes (INPUT TRUE).
-   RUN piHabilitaCampos (INPUT FALSE).
-   RUN piOpenQuery.
+ON CHOOSE OF bt-canc DO:
+    RUN piHabilitaBotoes (INPUT TRUE).
+    RUN piHabilitaCampos (INPUT FALSE).
+    RUN piMostra.
 END.
-/*                                                                                   */
-/*ON CHOOSE OF bt-canc DO:                                                           */
-/*    RUN piHabilitaBotoes (INPUT TRUE).                                             */
-/*    RUN piHabilitaCampos (INPUT FALSE).                                            */
-/*    RUN piMostra.                                                                  */
-/*END.                                                                               */
-/*                                                                                   */
-/*ON CHOOSE OF bt-exp DO:                                                            */
-/*    DEFINE VARIABLE cArq AS CHARACTER NO-UNDO.                                     */
-/*                                                                                   */
-/*    // Arquivo CSV                                                                 */
-/*    ASSIGN cArq = SEARCH("Pedidos.p")                                              */
-/*           cArq = REPLACE(cArq, "Pedidos.p", "Pedidos.csv").                       */
-/*    OUTPUT to value(cArq).                                                         */
-/*    FOR EACH Pedidos NO-LOCK:                                                      */
-/*        PUT UNFORMATTED                                                            */
-/*                Pedidos.CodCidade   ";"                                            */
-/*                Pedidos.CodCliente  ";"                                            */
-/*                Pedidos.CodEndereco ";"                                            */
-/*                Pedidos.NomCliente  ";"                                            */
-/*                Pedidos.Observacao  ";".                                           */
-/*        PUT UNFORMATTED SKIP.                                                      */
-/*    END.                                                                           */
-/*    OUTPUT close.                                                                  */
-/*                                                                                   */
-/*    // Arquivo JSON                                                                */
-/*    DEFINE VARIABLE oObj    AS JsonObject NO-UNDO.                                 */
-/*    DEFINE VARIABLE oOrd    AS JsonObject NO-UNDO.                                 */
-/*    DEFINE VARIABLE aCust   AS JsonArray  NO-UNDO.                                 */
-/*    DEFINE VARIABLE aOrders AS JsonArray  NO-UNDO.                                 */
-/*                                                                                   */
-/*    ASSIGN cArq = REPLACE(cArq, "Pedidos.csv", "Pedidos.json")                     */
-/*           aCust = NEW JsonArray().                                                */
-/*    FOR EACH Pedidos NO-LOCK:                                                      */
-/*        oObj = NEW JsonObject().                                                   */
-/*        oObj:add("CodCliente",  Pedidos.CodCliente).                               */
-/*        oObj:add("CodCidade",   Pedidos.CodCidade).                                */
-/*        oObj:add("CodEndereco", Pedidos.CodEndereco).                              */
-/*        oObj:add("NomCliente",  Pedidos.NomCliente).                               */
-/*        oObj:add("Observacao",  Pedidos.Observacao).                               */
-/*        aCust:add(oObj).                                                           */
-/*    END.                                                                           */
-/*    aCust:WriteFile(INPUT cArq, INPUT YES, INPUT "UTF-8").                         */
-/*                                                                                   */
-/*END.                                                                               */
+
+/*ON CHOOSE OF bt-exp DO:                                                */
+/*    DEFINE VARIABLE cArq AS CHARACTER NO-UNDO.                         */
+/*                                                                       */
+/*    // Arquivo CSV                                                     */
+/*    ASSIGN cArq = SEARCH("Pedidos.p")                                  */
+/*           cArq = REPLACE(cArq, "Pedidos.p", "Pedidos.csv").           */
+/*    OUTPUT to value(cArq).                                             */
+/*    FOR EACH Pedidos NO-LOCK:                                          */
+/*        PUT UNFORMATTED                                                */
+/*                Pedidos.CodPedido  ";"                                 */
+/*                Pedidos.CodCliente ";"                                 */
+/*                Pedidos.DatPedido  ";"                                 */
+/*                Pedidos.ValPedido  ";"                                 */
+/*                Pedidos.Observacao ";".                                */
+/*        FOR EACH Itens WHERE Itens.CodPedido = Itens.CodPedido NO-LOCK:*/
+/*            PUT UNFORMATTED                                            */
+/*                    Itens.CodItem       ";"                            */
+/*                    Itens.CodProduto    ";"                            */
+/*                    Itens.NumQuantidade ";"                            */
+/*                    Itens.ValTotal      ";".                           */
+/*        END.                                                           */
+/*        PUT UNFORMATTED SKIP.                                          */
+/*    END.                                                               */
+/*    OUTPUT close.                                                      */
+/*                                                                       */
+/*    // Arquivo JSON                                                    */
+/*    DEFINE VARIABLE oObj    AS JsonObject NO-UNDO.                     */
+/*    DEFINE VARIABLE oOrd    AS JsonObject NO-UNDO.                     */
+/*    DEFINE VARIABLE aCust   AS JsonArray  NO-UNDO.                     */
+/*    DEFINE VARIABLE aOrders AS JsonArray  NO-UNDO.                     */
+/*                                                                       */
+/*    ASSIGN cArq = REPLACE(cArq, "Pedidos.csv", "Pedidos.json")         */
+/*           aCust = NEW JsonArray().                                    */
+/*    FOR EACH Pedidos NO-LOCK:                                          */
+/*        oObj = NEW JsonObject().                                       */
+/*        oObj:add("CodCliente",  Pedidos.CodCliente).                   */
+/*        oObj:add("CodCidade",   Pedidos.CodCidade).                    */
+/*        oObj:add("CodEndereco", Pedidos.CodEndereco).                  */
+/*        oObj:add("NomCliente",  Pedidos.NomCliente).                   */
+/*        oObj:add("Observacao",  Pedidos.Observacao).                   */
+/*        aCust:add(oObj).                                               */
+/*    END.                                                               */
+/*    aCust:WriteFile(INPUT cArq, INPUT YES, INPUT "UTF-8").             */
+/*                                                                       */
+/*END.                                                                   */
 
 RUN piOpenQuery.
 RUN piHabilitaBotoes (INPUT TRUE).
@@ -236,9 +274,12 @@ WAIT-FOR WINDOW-CLOSE OF FRAME f-ped.
 
 PROCEDURE piMostra:
     IF AVAILABLE Pedidos THEN DO:
-        DISPLAY Pedidos.CodPedido  Pedidos.CodCliente Pedidos.DatPedido
-                Clientes.CodEndereco Clientes.CodCidade Pedidos.Observacao
+        DISPLAY Pedidos.CodPedido  Pedidos.CodCliente 
+                Pedidos.DatPedido Pedidos.Observacao
                     WITH FRAME f-ped.
+        IF AVAIL Clientes THEN
+            DISPLAY Clientes.CodEndereco Clientes.CodCidade Clientes.NomCliente
+                WITH FRAME f-ped.
         OPEN QUERY qItem FOR EACH Itens WHERE Itens.CodPedido = Pedidos.CodPedido, 
             FIRST Produtos WHERE Itens.CodProduto = Produtos.CodProduto.
     END.
@@ -277,6 +318,8 @@ PROCEDURE piHabilitaBotoes:
               bt-exp:SENSITIVE     = pEnable
               browseItem:SENSITIVE = pEnable
               bt-addItem:SENSITIVE = pEnable
+              bt-modItem:SENSITIVE = pEnable
+              bt-delItem:SENSITIVE = pEnable
               bt-save:SENSITIVE    = NOT pEnable
               bt-canc:SENSITIVE    = NOT pEnable.
     END.

@@ -14,6 +14,7 @@ DEFINE BUTTON bt-exp  LABEL "Exportar".
 DEFINE BUTTON bt-sair LABEL "Sair" AUTO-ENDKEY.
 
 DEFINE VARIABLE cAction  AS CHARACTER   NO-UNDO.
+DEFINE VARIABLE lValid   AS LOGICAL     NO-UNDO.
 
 DEFINE QUERY qCli FOR Clientes, Cidades SCROLLING.
 
@@ -109,34 +110,42 @@ ON CHOOSE OF bt-del DO:
 END.
 
 ON LEAVE OF Clientes.CodCidade DO:
-    DEFINE VARIABLE lValid AS LOGICAL     NO-UNDO.
     RUN piValidaCidade (INPUT Clientes.CodCidade:SCREEN-VALUE, 
-                          OUTPUT lValid).
-    IF NOT lValid THEN DO:
-        RETURN NO-APPLY.
-    END.
-    DISPLAY Cidades.NomCidade WITH FRAME f-cli.
+                        OUTPUT lValid).
+    IF lValid THEN
+        DISPLAY Cidades.NomCidade WITH FRAME f-cli.
+    ELSE
+        DISPLAY "Cidade nao encontrada" @ Cidades.NomCidade WITH FRAME f-cli.
 END.
 
 ON CHOOSE OF bt-save DO:
-   IF cAction = "add" THEN DO:
-      CREATE bClientes.
-      ASSIGN bClientes.CodCliente  = INPUT Clientes.CodCliente.
-   END.
-   IF  cAction = "mod" THEN DO:
-       FIND FIRST bClientes
+    RUN piValidaCidade (INPUT Clientes.CodCidade:SCREEN-VALUE, 
+                        OUTPUT lValid).
+    IF NOT lValid THEN DO:
+        MESSAGE "Cidade " INPUT Clientes.CodCidade " nao existe!"
+                VIEW-AS ALERT-BOX ERROR.
+        RETURN NO-APPLY.
+    END.
+    IF cAction = "add" THEN DO:
+        CREATE bClientes.
+        ASSIGN 
+            bClientes.CodCliente = INPUT Clientes.CodCliente.
+    END.
+    IF  cAction = "mod" THEN DO:
+        FIND FIRST bClientes
             WHERE bClientes.CodCliente = Clientes.CodCliente
-                EXCLUSIVE-LOCK NO-ERROR.
-   END.
+            EXCLUSIVE-LOCK NO-ERROR.
+    END.
 
-   ASSIGN bClientes.NomCliente  = INPUT Clientes.NomCliente
-          bClientes.CodCidade   = INPUT Clientes.CodCidade
-          bClientes.CodEndereco = INPUT Clientes.CodEndereco
-          bClientes.Observacao  = INPUT Clientes.Observacao.
+    ASSIGN 
+        bClientes.NomCliente  = INPUT Clientes.NomCliente
+        bClientes.CodCidade   = INPUT Clientes.CodCidade
+        bClientes.CodEndereco = INPUT Clientes.CodEndereco
+        bClientes.Observacao  = INPUT Clientes.Observacao.
 
-   RUN piHabilitaBotoes (INPUT TRUE).
-   RUN piHabilitaCampos (INPUT FALSE).
-   RUN piOpenQuery.
+    RUN piHabilitaBotoes (INPUT TRUE).
+    RUN piHabilitaCampos (INPUT FALSE).
+    RUN piOpenQuery.
 END.
 
 ON CHOOSE OF bt-canc DO:
@@ -192,6 +201,7 @@ WAIT-FOR WINDOW-CLOSE OF FRAME f-cli.
 
 PROCEDURE piMostra:
     IF AVAILABLE Clientes THEN DO:
+        FIND Cidades WHERE Cidades.CodCidade = Clientes.CodCidade.
         DISPLAY Clientes.CodCidade  Clientes.CodCliente Clientes.CodEndereco
                 Clientes.NomCliente Clientes.Observacao Cidades.NomCidade
                     WITH FRAME f-cli.
@@ -250,11 +260,8 @@ PROCEDURE piValidaCidade:
     FIND FIRST Cidades
         WHERE Cidades.CodCidade = pCidade
         NO-LOCK NO-ERROR.
-    IF  NOT AVAILABLE Cidades THEN DO:
-        MESSAGE "Cidade " pCidade " nao existe!"
-                VIEW-AS ALERT-BOX ERROR.
+    IF  NOT AVAILABLE Cidades THEN
         ASSIGN pValid = NO.
-    END.
     ELSE 
        ASSIGN pValid = YES.
 END PROCEDURE.

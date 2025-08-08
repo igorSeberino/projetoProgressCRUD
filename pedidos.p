@@ -19,7 +19,7 @@ DEFINE BUTTON bt-sair LABEL "Sair" AUTO-ENDKEY.
 DEFINE            VARIABLE cAction     AS CHARACTER NO-UNDO.
 DEFINE            VARIABLE cTable      AS CHARACTER NO-UNDO.
 DEFINE            VARIABLE iNumItem    AS INTEGER   NO-UNDO.
-DEFINE            VARIABLE lValid      AS LOGICAL   NO-UNDO.
+DEFINE VARIABLE lValid  AS LOGICAL   NO-UNDO.
 
 DEFINE NEW SHARED VARIABLE cActionItem AS CHARACTER NO-UNDO.
 
@@ -206,7 +206,7 @@ ON LEAVE OF Pedidos.CodCliente
         RUN piValidaCliente (INPUT Pedidos.CodCliente:SCREEN-VALUE, 
             OUTPUT lValid).
         IF lValid THEN
-            DISPLAY Pedidos.CodCliente WITH FRAME f-ped.
+            DISPLAY Clientes.NomCliente WITH FRAME f-ped.
         ELSE
             DISPLAY "Cliente nao encontrado" @ Clientes.NomCliente WITH FRAME f-ped.
     END.

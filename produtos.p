@@ -14,7 +14,6 @@ DEFINE BUTTON bt-exp  LABEL "Exportar".
 DEFINE BUTTON bt-sair LABEL "Sair" AUTO-ENDKEY.
 
 DEFINE VARIABLE cAction AS CHARACTER NO-UNDO.
-DEFINE VARIABLE lValid  AS LOGICAL   NO-UNDO.
 
 DEFINE QUERY qProd FOR Produtos SCROLLING.
 
@@ -86,7 +85,7 @@ ON CHOOSE OF bt-mod
             cAction = "mod".
         RUN piHabilitaBotoes (INPUT FALSE).
         RUN piHabilitaCampos (INPUT TRUE).
-    
+
         DISPLAY Produtos.CodProduto WITH FRAME f-prod.
         RUN piMostra.
     END.
@@ -94,10 +93,10 @@ ON CHOOSE OF bt-mod
 ON CHOOSE OF bt-del 
     DO:
         DEFINE VARIABLE lConf AS LOGICAL NO-UNDO.
-    
+
         DEFINE BUFFER bProdutos FOR Produtos.
-    
-        MESSAGE "Confirma a eliminacao do produto" Produtos.NomProduto "?" UPDATE lConf
+
+        MESSAGE "Confirma a eliminacao do produto " Produtos.NomProduto "?" UPDATE lConf
             VIEW-AS ALERT-BOX QUESTION BUTTONS YES-NO
             TITLE "Eliminacao".
         IF  lConf THEN 
@@ -144,7 +143,7 @@ ON CHOOSE OF bt-save
         RUN piHabilitaBotoes (INPUT TRUE).
         RUN piHabilitaCampos (INPUT FALSE).
         RUN piOpenQuery.
-        IF cAction = "add" THEN 
+        IF cAction = "add" THEN
             APPLY 'choose' TO bt-ult.
     END.
 
@@ -158,7 +157,7 @@ ON CHOOSE OF bt-canc
 ON CHOOSE OF bt-exp 
     DO:
         DEFINE VARIABLE cArq AS CHARACTER NO-UNDO.
-        
+    
         FIND bProdutos WHERE bProdutos.CodProduto = Produtos.CodProduto.
     
     // Arquivo CSV

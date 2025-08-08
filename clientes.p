@@ -168,6 +168,8 @@ ON CHOOSE OF bt-save
         RUN piOpenQuery.
         IF cAction = "add" THEN 
             APPLY 'choose' TO bt-ult.
+        ELSE
+            APPLY 'choose' TO bt-prox.
     END.
 
 ON CHOOSE OF bt-canc 
@@ -189,11 +191,14 @@ ON CHOOSE OF bt-exp
             cArq = REPLACE(cArq, "Clientes.p", "Clientes.csv").
         OUTPUT to value(cArq).
         FOR EACH Clientes NO-LOCK:
+            FIND FIRST Cidades WHERE Cidades.CodCidade = Clientes.CodCidade
+                NO-LOCK NO-ERROR.
             PUT UNFORMATTED
-                Clientes.CodCidade   ";"
                 Clientes.CodCliente  ";"
-                Clientes.CodEndereco ";"
                 Clientes.NomCliente  ";"
+                Clientes.CodCidade   ";"
+                Cidades.NomCidade    ";"
+                Clientes.CodEndereco ";"
                 Clientes.Observacao  ";".
             PUT UNFORMATTED SKIP.
         END.
@@ -209,11 +214,14 @@ ON CHOOSE OF bt-exp
             cArq  = REPLACE(cArq, "Clientes.csv", "Clientes.json")
             aCust = NEW JsonArray().
         FOR EACH Clientes NO-LOCK:
+            FIND FIRST Cidades WHERE Cidades.CodCidade = Clientes.CodCidade
+                NO-LOCK NO-ERROR.
             oObj = NEW JsonObject().
             oObj:add("CodCliente",  Clientes.CodCliente).
-            oObj:add("CodCidade",   Clientes.CodCidade).
-            oObj:add("CodEndereco", Clientes.CodEndereco).
             oObj:add("NomCliente",  Clientes.NomCliente).
+            oObj:add("CodCidade",   Clientes.CodCidade).
+            oObj:add("NomCidade",   Cidades.NomCidade).
+            oObj:add("CodEndereco", Clientes.CodEndereco).
             oObj:add("Observacao",  Clientes.Observacao).
             aCust:add(oObj).
         END.

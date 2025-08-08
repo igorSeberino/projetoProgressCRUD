@@ -145,6 +145,8 @@ ON CHOOSE OF bt-save
         RUN piOpenQuery.
         IF cAction = "add" THEN
             APPLY 'choose' TO bt-ult.
+        ELSE
+            APPLY 'choose' TO bt-prox.
     END.
 
 ON CHOOSE OF bt-canc 
@@ -185,7 +187,7 @@ ON CHOOSE OF bt-exp
             oObj = NEW JsonObject().
             oObj:add("CodProduto", Produtos.CodProduto).
             oObj:add("NomProduto", Produtos.NomProduto).
-            oObj:add("ValProduto",     Produtos.ValProduto).
+            oObj:add("ValProduto", Produtos.ValProduto).
             aProd:add(oObj).
         END.
         aProd:WriteFile(INPUT cArq, INPUT YES, INPUT "UTF-8").

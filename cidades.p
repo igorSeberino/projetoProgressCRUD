@@ -145,6 +145,8 @@ ON CHOOSE OF bt-save
         RUN piOpenQuery.
         IF cAction = "add" THEN 
             APPLY 'choose' TO bt-ult.
+        ELSE
+            APPLY 'choose' TO bt-prox.
     END.
 
 ON CHOOSE OF bt-canc 

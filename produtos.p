@@ -14,57 +14,58 @@ DEFINE BUTTON bt-exp  LABEL "Exportar".
 DEFINE BUTTON bt-sair LABEL "Sair" AUTO-ENDKEY.
 
 DEFINE VARIABLE cAction AS CHARACTER NO-UNDO.
+DEFINE VARIABLE lValid  AS LOGICAL   NO-UNDO.
 
-DEFINE QUERY qCid FOR Cidades SCROLLING.
+DEFINE QUERY qProd FOR Produtos SCROLLING.
 
-DEFINE BUFFER bCidades FOR Cidades.
+DEFINE BUFFER bProdutos FOR Produtos.
 
-DEFINE FRAME f-cid
+DEFINE FRAME f-prod
     bt-pri AT 10
     bt-ant 
     bt-prox 
     bt-ult SPACE(3) 
     bt-add bt-mod bt-del bt-save bt-canc bt-exp SPACE(3)
     bt-sair  SKIP(1)
-    Cidades.CodCidade  COLON 20
-    Cidades.CodUF     COLON 20
-    Cidades.NomCidade COLON 20
+    Produtos.CodProduto COLON 20
+    Produtos.NomProduto COLON 20
+    Produtos.ValProduto COLON 20
     WITH SIDE-LABELS THREE-D SIZE 120 BY 15
-    VIEW-AS DIALOG-BOX TITLE "Cidades".
+    VIEW-AS DIALOG-BOX TITLE "Produtos".
 
 ON CHOOSE OF bt-pri 
     DO:
-        GET FIRST qCid.
+        GET FIRST qProd.
         RUN piMostra.
     END.
 
 ON CHOOSE OF bt-ant 
     DO:
-        GET PREV qCid.
-        IF AVAILABLE Cidades THEN
+        GET PREV qProd.
+        IF AVAILABLE Produtos THEN
             RUN piMostra.
         ELSE 
         DO:
-            GET FIRST qCid.
+            GET FIRST qProd.
             RUN piMostra.
         END.
     END.
 
 ON CHOOSE OF bt-prox 
     DO:
-        GET NEXT qCid.
-        IF AVAILABLE Cidades THEN
+        GET NEXT qProd.
+        IF AVAILABLE Produtos THEN
             RUN piMostra.
         ELSE 
         DO:
-            GET LAST qCid.
+            GET LAST qProd.
             RUN piMostra.
         END.
     END.
 
 ON CHOOSE OF bt-ult 
     DO:
-        GET LAST qCid.
+        GET LAST qProd.
         RUN piMostra.
     END.
 
@@ -75,8 +76,8 @@ ON CHOOSE OF bt-add
         RUN piHabilitaBotoes (INPUT FALSE).
         RUN piHabilitaCampos (INPUT TRUE).
    
-        CLEAR FRAME f-cid.
-        DISPLAY NEXT-VALUE(seqCidade) @ Cidades.CodCidade WITH FRAME f-cid.
+        CLEAR FRAME f-prod.
+        DISPLAY NEXT-VALUE(seqProduto) @ Produtos.CodProduto WITH FRAME f-prod.
     END.
 
 ON CHOOSE OF bt-mod 
@@ -85,37 +86,37 @@ ON CHOOSE OF bt-mod
             cAction = "mod".
         RUN piHabilitaBotoes (INPUT FALSE).
         RUN piHabilitaCampos (INPUT TRUE).
-
-        DISPLAY Cidades.CodCidade WITH FRAME f-cid.
+    
+        DISPLAY Produtos.CodProduto WITH FRAME f-prod.
         RUN piMostra.
     END.
 
 ON CHOOSE OF bt-del 
     DO:
         DEFINE VARIABLE lConf AS LOGICAL NO-UNDO.
-
-        DEFINE BUFFER bCidade FOR Cidades.
-
-        MESSAGE "Confirma a eliminacao da cidade" Cidades.NomCidade "?" UPDATE lConf
+    
+        DEFINE BUFFER bProdutos FOR Produtos.
+    
+        MESSAGE "Confirma a eliminacao do produto" Produtos.NomProduto "?" UPDATE lConf
             VIEW-AS ALERT-BOX QUESTION BUTTONS YES-NO
             TITLE "Eliminacao".
         IF  lConf THEN 
         DO:
-            FIND bCidades
-                WHERE bCidades.CodCidade = Cidades.CodCidade
+            FIND bProdutos
+                WHERE bProdutos.CodProduto = Produtos.CodProduto
                 EXCLUSIVE-LOCK NO-ERROR.
-            IF  AVAILABLE bCidades THEN 
+            IF  AVAILABLE bProdutos THEN 
             DO:
-                FIND FIRST Clientes WHERE Clientes.CodCidade = Cidades.CodCidade 
+                FIND FIRST Itens WHERE Itens.CodProduto = Produtos.CodProduto
                     NO-LOCK NO-ERROR.
-                IF AVAILABLE Clientes THEN
-                    MESSAGE "Cidade contem clientes, operacao cancelada!"
+                IF AVAILABLE Itens THEN
+                    MESSAGE "Produto tem pedidos pendentes, opera‡Æo cancelada!"
                         VIEW-AS ALERT-BOX.
                 ELSE 
                 DO:
-                    DELETE bCidades.
+                    DELETE bProdutos.
                     RUN piOpenQuery.
-                    APPLY "choose" TO bt-pri.
+                    APPLY 'choose' TO bt-pri.
                 END.
             END.
         END.
@@ -125,20 +126,20 @@ ON CHOOSE OF bt-save
     DO:
         IF cAction = "add" THEN 
         DO:
-            CREATE bCidades.
+            CREATE bProdutos.
             ASSIGN 
-                bCidades.CodCidade = INPUT Cidades.CodCidade.
+                bProdutos.CodProduto = INPUT Produtos.CodProduto.
         END.
         IF  cAction = "mod" THEN 
         DO:
-            FIND FIRST bCidades
-                WHERE bCidades.CodCidade = Cidades.CodCidade
+            FIND FIRST bProdutos
+                WHERE bProdutos.CodProduto = Produtos.CodProduto
                 EXCLUSIVE-LOCK NO-ERROR.
         END.
 
         ASSIGN 
-            bCidades.NomCidade = INPUT Cidades.NomCidade
-            bCidades.CodUf     = upper(INPUT Cidades.CodUF).
+            bProdutos.NomProduto = INPUT Produtos.NomProduto
+            bProdutos.ValProduto = INPUT Produtos.ValProduto.
 
         RUN piHabilitaBotoes (INPUT TRUE).
         RUN piHabilitaCampos (INPUT FALSE).
@@ -157,42 +158,40 @@ ON CHOOSE OF bt-canc
 ON CHOOSE OF bt-exp 
     DO:
         DEFINE VARIABLE cArq AS CHARACTER NO-UNDO.
-    
-        FIND bCidades WHERE bCidades.CodCidade = Cidades.CodCidade.
+        
+        FIND bProdutos WHERE bProdutos.CodProduto = Produtos.CodProduto.
     
     // Arquivo CSV
         ASSIGN 
-            cArq = SEARCH("Cidades.p") 
-            cArq = REPLACE(cArq, "Cidades.p", "Cidades.csv").
+            cArq = SEARCH("Produtos.p") 
+            cArq = REPLACE(cArq, "Produtos.p", "Produtos.csv").
         OUTPUT to value(cArq).
-        FOR EACH Cidades NO-LOCK:
+        FOR EACH Produtos NO-LOCK:
             PUT UNFORMATTED
-                Cidades.CodCidade ";"
-                Cidades.NomCidade ";"
-                Cidades.CodUF    ";".
+                Produtos.CodProduto ";"
+                Produtos.NomProduto ";"
+                Produtos.ValProduto    ";".
             PUT UNFORMATTED SKIP.
         END.
         OUTPUT close.
     
     // Arquivo JSON
-        DEFINE VARIABLE oObj    AS JsonObject NO-UNDO.
-        DEFINE VARIABLE oOrd    AS JsonObject NO-UNDO.
-        DEFINE VARIABLE aCust   AS JsonArray  NO-UNDO.
-        DEFINE VARIABLE aOrders AS JsonArray  NO-UNDO.
+        DEFINE VARIABLE oObj  AS JsonObject NO-UNDO.
+        DEFINE VARIABLE aProd AS JsonArray  NO-UNDO.
 
         ASSIGN 
-            cArq  = REPLACE(cArq, "Cidades.csv", "Cidades.json")
-            aCust = NEW JsonArray().
-        FOR EACH Cidades NO-LOCK:
+            cArq  = REPLACE(cArq, "Produtos.csv", "Produtos.json")
+            aProd = NEW JsonArray().
+        FOR EACH Produtos NO-LOCK:
             oObj = NEW JsonObject().
-            oObj:add("CodCidade", Cidades.CodCidade).
-            oObj:add("NomCidade", Cidades.NomCidade).
-            oObj:add("CodUF",     Cidades.CodUF).
-            aCust:add(oObj).
+            oObj:add("CodProduto", Produtos.CodProduto).
+            oObj:add("NomProduto", Produtos.NomProduto).
+            oObj:add("ValProduto",     Produtos.ValProduto).
+            aProd:add(oObj).
         END.
-        aCust:WriteFile(INPUT cArq, INPUT YES, INPUT "UTF-8").
+        aProd:WriteFile(INPUT cArq, INPUT YES, INPUT "UTF-8").
     
-        FIND Cidades WHERE Cidades.CodCidade = bCidades.CodCidade.
+        FIND Produtos WHERE Produtos.CodProduto = bProdutos.CodProduto.
         RUN piMostra.
     END.
 
@@ -200,38 +199,38 @@ RUN piOpenQuery.
 RUN piHabilitaBotoes (INPUT TRUE).
 APPLY "choose" TO bt-pri.
 
-WAIT-FOR WINDOW-CLOSE OF FRAME f-cid.
+WAIT-FOR WINDOW-CLOSE OF FRAME f-prod.
 
 PROCEDURE piMostra:
-    IF AVAILABLE Cidades THEN 
+    IF AVAILABLE Produtos THEN 
     DO:
-        DISPLAY Cidades.CodCidade Cidades.NomCidade Cidades.CodUF
-            WITH FRAME f-cid.
+        DISPLAY Produtos.CodProduto Produtos.NomProduto Produtos.ValProduto 
+            WITH FRAME f-prod.
     END.
     ELSE 
     DO:
-        CLEAR FRAME f-cid.
+        CLEAR FRAME f-prod.
     END.
 END PROCEDURE.
 
 PROCEDURE piOpenQuery:
     DEFINE VARIABLE rRecord AS ROWID NO-UNDO.
     
-    IF  AVAILABLE Cidades THEN 
+    IF  AVAILABLE Produtos THEN 
     DO:
         ASSIGN 
-            rRecord = ROWID(Cidades).
+            rRecord = ROWID(Produtos).
     END.
     
-    OPEN QUERY qCid FOR EACH Cidades.
+    OPEN QUERY qProd FOR EACH Produtos.
 
-    REPOSITION qCid TO ROWID rRecord NO-ERROR.
+    REPOSITION qProd TO ROWID rRecord NO-ERROR.
 END PROCEDURE.
 
 PROCEDURE piHabilitaBotoes:
     DEFINE INPUT PARAMETER pEnable AS LOGICAL NO-UNDO.
 
-    DO WITH FRAME f-cid:
+    DO WITH FRAME f-prod:
         ASSIGN 
             bt-pri:SENSITIVE  = pEnable
             bt-ant:SENSITIVE  = pEnable
@@ -250,9 +249,9 @@ END PROCEDURE.
 PROCEDURE piHabilitaCampos:
     DEFINE INPUT PARAMETER pEnable AS LOGICAL NO-UNDO.
 
-    DO WITH FRAME f-cid:
+    DO WITH FRAME f-prod:
         ASSIGN 
-            Cidades.NomCidade:SENSITIVE = pEnable
-            Cidades.CodUF:SENSITIVE     = pEnable.
+            Produtos.NomProduto:SENSITIVE = pEnable
+            Produtos.ValProduto:SENSITIVE = pEnable.
     END.
 END PROCEDURE.

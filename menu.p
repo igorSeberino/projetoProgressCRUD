@@ -45,5 +45,5 @@ PROCEDURE piChamaPrograma:
     
     ASSIGN nome = LC(REPLACE(nome, "bt", "") + ".p").
     
-    RUN VALUE("c:/treinamento/workspace/projetofinal/" + nome).
-END PROCEDURE
+    RUN VALUE("c:/treinamento/workspace/projetofinal/" + nome) NO-ERROR.
+END PROCEDURE.
